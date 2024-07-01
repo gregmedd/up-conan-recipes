@@ -2,6 +2,7 @@ from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
 from conan.tools.scm import Git
 from conan.tools.files import copy
+import os
 
 
 class upCoreApiRecipe(ConanFile):
@@ -23,12 +24,17 @@ class upCoreApiRecipe(ConanFile):
             "commitish": ["ANY"] }
 
     default_options = {
-            "shared": False,
-            "fPIC": True,
-            "fork": "eclipse-uprotocol/up-spec",
-            "commitish": "main"}
+        "shared": False,
+        "fPIC": True,
+        "fork": "eclipse-uprotocol/up-spec",
+        "commitish": "main"
+    }
 
     requires = "protobuf/3.21.12"
+
+    def init(self):
+        self.fork = self.options.get_safe("fork", "eclipse-uprotocol/up-spec")
+        self.commitish = self.options.get_safe("commitish", "main")
 
     # We are providing our own cmake config since one is not included in the
     # spec repo.
@@ -37,19 +43,10 @@ class upCoreApiRecipe(ConanFile):
              self.recipe_folder + "/..", self.export_sources_folder)
 
     def source(self):
-        # Workaround for compatibility with conan1 and conan2
-        # https://github.com/conan-io/conan/issues/13506
-        try:
-            fork = self.options.fork
-            commitish = self.options.commitish
-        except:
-            fork = self.info.options.fork
-            commitish = self.info.options.commitish
-
         git = Git(self, folder="up-spec")
-        git.clone("https://github.com/{}.git".format(fork), target=".")
-        git.checkout(commitish)
-        self.run("ln -s up-spec/up-core-api up-core-api")
+        git.clone(f"https://github.com/{self.fork}.git", target=".")
+        git.checkout(self.commitish)
+        os.symlink("up-spec/up-core-api", "up-core-api")
 
     def config_options(self):
         if self.settings.os == "Windows":
